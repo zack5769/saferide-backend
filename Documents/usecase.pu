@@ -1,0 +1,13 @@
+@startuml
+actor "user" as user
+participant "fastapi" as fastapi
+participant "graphhopper" as graphhopper
+participant "cloud_loder" as cloud_loader
+
+user -> fastapi : request : 現在位置と目的地を指定
+fastapi -> cloud_loader : 現在位置と目的地を含んだbounding_box内の降雨予報データを取得
+cloud_loader -> fastapi : 降雨予報データを返す
+fastapi -> graphhopper : 現在位置と目的地を含んだbounding_box内の降雨予報を除外したルートを計算
+graphhopper -> fastapi : ルートを返す
+fastapi -> user : ルートを返す
+@enduml

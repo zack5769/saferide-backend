@@ -1,0 +1,30 @@
+services:
+  graphhopper:
+    build:
+      context: ./Docker/graphhopper
+    ports:
+      - "8989:8989"
+    volumes:
+      - ./graphhopper:/app
+    networks:
+      - saferide
+    # command: [ "tail", "-f", "/dev/null" ]
+    command: "java -Xmx8g -Xms4g -Ddw.graphhopper.datareader.file=japan-latest.osm.pbf -jar graphhopper-web-10.0.jar server config.yml"
+
+  python:
+    build:
+      context: .
+      dockerfile: ./Docker/python/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - YAHOO_API_KEY=${yahoo_API}
+    volumes:
+      - .:/app
+    networks:
+      - saferide
+    command: "uvicorn src.modules.api:app --reload --host 0.0.0.0 --port 5000"
+
+networks:
+  saferide:
+    driver: bridge

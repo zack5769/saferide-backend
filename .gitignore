@@ -1,0 +1,6 @@
+.env
+.vscode
+__pycache__
+graphhopper/graph-cache/*
+graphhopper/graphhopper-web-10.0.jar
+graphhopper/japan-latest.osm.pbf
