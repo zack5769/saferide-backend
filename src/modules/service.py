@@ -55,7 +55,7 @@ def get_rain_info(start: str, goal: str):
     return result
 
 
-def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict):
+def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict = None):
     """
     GraphHopperサーバーにルートリクエストを送信し、雨エリア回避を考慮したルート情報を取得する。
     
