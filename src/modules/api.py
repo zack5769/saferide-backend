@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 from starlette.middleware.cors import CORSMiddleware
+from typing import Dict, Any
 
 from .service import get_route_from_graphhopper, get_rain_info
 from src.core.logger import get_logger
@@ -19,8 +20,20 @@ app.add_middleware(
 )
 
 @app.get("/route/{start}/{goal}",
-         description="雨を考慮したルートを取得する")
-async def route(start: str, goal: str):
+         description="雨を考慮したルートを取得する",
+         response_model=Dict[str, Any])
+async def route(
+    start: str = Path(
+        ...,
+        description="開始地点の座標（緯度,経度）",
+        example="35.6762,139.6503"
+    ),
+    goal: str = Path(
+        ...,
+        description="目的地の座標（緯度,経度）",
+        example="35.7169,139.7774"
+    )
+):
     """
     指定された開始地点と目的地の間の雨データを取得するエンドポイント。
     
@@ -39,8 +52,20 @@ async def route(start: str, goal: str):
 
 
 @app.get("/normal_route/{start}/{goal}",
-         description="通常のルートを取得する")
-async def normal_route(start: str, goal: str):
+         description="通常のルートを取得する",
+         response_model=Dict[str, Any])
+async def normal_route(
+    start: str = Path(
+        ...,
+        description="開始地点の座標（緯度,経度）",
+        example="35.6762,139.6503"
+    ),
+    goal: str = Path(
+        ...,
+        description="目的地の座標（緯度,経度）",
+        example="35.7169,139.7774"
+    )
+):
     """
     指定された開始地点と目的地の間の通常のルートを取得するエンドポイント。
     
