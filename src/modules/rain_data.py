@@ -142,6 +142,7 @@ class RainData:
         """
         logger.debug("Converting rain data to GraphHopper request format")
         geojson = self.to_geojson()
+        # self.to_geojsonfile()  # Save GeoJSON to file for debugging
         features = geojson.get("features", [])
         logger.debug("Got %d features from GeoJSON conversion", len(features))
         
@@ -176,3 +177,14 @@ class RainData:
         logger.debug("GraphHopper request format conversion completed. Priority rules: %d, Areas: %d", len(priority), len(modified_features))
         return result
 
+    def to_geojsonfile(self, filename: str = "rain_data.geojson"):
+        """
+        GeoJSON形式でファイルに保存
+        
+        Args:
+            filename (str): 保存するファイル名
+        """
+        geojson = self.to_geojson()
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(geojson, f, ensure_ascii=False, indent=2)
+        logger.info("GeoJSON data saved to %s", filename)

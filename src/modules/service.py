@@ -42,15 +42,9 @@ def get_rain_info(start: str, goal: str):
     
     rain_request_data = rain_data.to_request_json()
 
-    # GraphHopperにルート情報をリクエスト
-    route_response = get_route_from_graphhopper(start, goal, rain_request_data)
-
     logger.info("Rain tiles detected: %d", rain_data.num_rain_tiles)
     
-    result = {
-        "rain_data": rain_request_data,
-        "route": route_response
-    }
+    result = rain_request_data
     logger.debug("get_rain_info result: %s", json.dumps(result, ensure_ascii=False))
     return result
 
@@ -82,13 +76,16 @@ def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict 
             [goal_lon, goal_lat]     # [lon, lat]
         ],
         "profile": "car",
-        "points_encoded": False
+        "points_encoded": False,
+        "ch.disable": True
     }
     
     # 雨エリア回避設定を追加
     if rain_avoidance_data and "priority" in rain_avoidance_data and "areas" in rain_avoidance_data:
-        request_body["priority"] = rain_avoidance_data["priority"]
-        request_body["areas"] = rain_avoidance_data["areas"]
+        request_body["custom_model"] = {
+            "priority": rain_avoidance_data["priority"],
+            "areas": rain_avoidance_data["areas"]
+        }
     
     try:
         logger.info("Sending route request to GraphHopper: %s", url)
