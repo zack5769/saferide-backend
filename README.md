@@ -44,7 +44,10 @@ wget https://download.geofabrik.de/asia/japan-latest.osm.pbf
 
 ### 2. 環境変数の設定
 
-Yahoo!気象情報APIのキー`.env`に記述
+Yahoo!気象情報APIのキーを`.env`に記述。ログ関連のオプションとして、以下の環境変数も設定可能:
+
+- `LOG_LEVEL` - ログレベル（デフォルト: `INFO`）
+- `LOG_FILE`  - ログファイルのパス（デフォルト: `logs/app.log`）
 
 ### 3. アプリケーションの起動
 
@@ -54,6 +57,8 @@ Yahoo!気象情報APIのキー`.env`に記述
 docker-compose build
 docker-compose up -d
 ```
+
+`__main__.py`を直接実行する必要はなく、上記コマンドでAPIサーバーとGraphHopperが同時に起動する。
 
 ## API仕様
 
