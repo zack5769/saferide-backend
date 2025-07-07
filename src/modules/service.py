@@ -5,6 +5,9 @@ from datetime import datetime, timezone, timedelta
 
 from .rain_data import RainData
 from .values import bounding_box, coordinate
+from src.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 YAHOO_API_KEY = os.environ.get('YAHOO_API_KEY')
 JST = timezone(timedelta(hours=9))
@@ -21,6 +24,8 @@ def get_rain_info(start: str, goal: str):
         dict: 雨データを含む辞書
     """
 
+    logger.info("Fetching rain info between %s and %s", start, goal)
+
     s_lat, slon = map(float, start.split(','))
     g_lat, glon = map(float, goal.split(','))
 
@@ -36,14 +41,18 @@ def get_rain_info(start: str, goal: str):
     rain_data.get(coordinate_list=grid_coordinates, date=now)
     
     rain_request_data = rain_data.to_request_json()
-    
+
     # GraphHopperにルート情報をリクエスト
     route_response = get_route_from_graphhopper(start, goal, rain_request_data)
+
+    logger.info("Rain tiles detected: %d", rain_data.num_rain_tiles)
     
-    return {
+    result = {
         "rain_data": rain_request_data,
         "route": route_response
     }
+    logger.debug("get_rain_info result: %s", json.dumps(result, ensure_ascii=False))
+    return result
 
 
 def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict):
@@ -82,8 +91,8 @@ def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict)
         request_body["areas"] = rain_avoidance_data["areas"]
     
     try:
-        print(f"Sending route request to GraphHopper: {url}")
-        print(f"Request body: {json.dumps(request_body, indent=2, ensure_ascii=False)}")
+        logger.info("Sending route request to GraphHopper: %s", url)
+        logger.debug("Request body: %s", json.dumps(request_body, indent=2, ensure_ascii=False))
         
         headers = {
             'Content-Type': 'application/json'
@@ -93,11 +102,11 @@ def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict)
         
         if response.status_code == 200:
             route_data = response.json()
-            print("Route calculation successful")
+            logger.info("Route calculation successful")
             return route_data
         else:
             error_msg = f"GraphHopper API error: {response.status_code} - {response.text}"
-            print(f"**ERROR** {error_msg}")
+            logger.error(error_msg)
             return {
                 "error": error_msg,
                 "status_code": response.status_code
@@ -105,13 +114,13 @@ def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict)
             
     except requests.exceptions.RequestException as e:
         error_msg = f"Request to GraphHopper failed: {str(e)}"
-        print(f"**ERROR** {error_msg}")
+        logger.error(error_msg)
         return {
             "error": error_msg
         }
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
-        print(f"**ERROR** {error_msg}")
+        logger.error(error_msg)
         return {
             "error": error_msg
         }
