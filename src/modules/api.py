@@ -1,9 +1,6 @@
 from fastapi import FastAPI
 
 from .service import get_route_from_graphhopper, get_rain_info
-from src.core.logger import get_logger
-
-logger = get_logger(__name__)
 
 
 app = FastAPI()
@@ -21,8 +18,5 @@ async def route(start: str, goal: str):
     Returns:
         dict: 雨データとルート情報を含む辞書
     """
-    logger.info("/route called with start=%s goal=%s", start, goal)
     rain_data = get_rain_info(start, goal)
-    response = get_route_from_graphhopper(start, goal, rain_data)
-    logger.debug("Route response: %s", response)
-    return response
+    return get_route_from_graphhopper(start, goal, rain_data)
