@@ -3,6 +3,9 @@ import requests
 from datetime import datetime
 
 from .values import coordinate
+from src.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 class RainData:
     def __init__(self, appid: str):
@@ -29,7 +32,7 @@ class RainData:
             try:
                 response = requests.get(url)
                 if response.status_code != 200:
-                    print(f"**ERROR** Error fetching data for chunk {chunk_index + 1}: {response.status_code} - {response.text}")
+                    logger.error("Error fetching data for chunk %d: %s - %s", chunk_index + 1, response.status_code, response.text)
                     continue
                 
                 chunk_data = response.json()
@@ -42,7 +45,7 @@ class RainData:
                     pass
                     
             except Exception as e:
-                print(f"**ERROR** Exception while processing chunk {chunk_index + 1}: {e}")
+                logger.error("Exception while processing chunk %d: %s", chunk_index + 1, e)
                 continue
         
         self.data = merged_data
@@ -94,7 +97,7 @@ class RainData:
                         }
                     })
             except Exception as e:
-                print(f"[WARN] Skip feature due to error: {e}")
+                logger.warning("Skip feature due to error: %s", e)
                 continue
         return {
             "type": "FeatureCollection",
