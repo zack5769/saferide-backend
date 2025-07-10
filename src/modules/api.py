@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from typing import Dict, Any
 
@@ -43,10 +43,27 @@ async def route(
         
     Returns:
         dict: 雨データとルート情報を含む辞書
+        
+    Raises:
+        HTTPException: GraphHopperへのリクエストが失敗した場合
     """
     logger.info("/route called with start=%s goal=%s", start, goal)
     rain_data = get_rain_info(start, goal)
     response = get_route_from_graphhopper(start, goal, rain_data)
+    
+    # GraphHopperからのエラーレスポンスをチェック
+    if "error" in response:
+        status_code = response.get("status_code", 500)
+        error_message = response["error"]
+        logger.error("GraphHopper error: %s", error_message)
+        
+        # GraphHopperのAPIエラーの場合は400番台エラーとして返す
+        if status_code in [400, 404, 422]:
+            raise HTTPException(status_code=status_code, detail=error_message)
+        else:
+            # その他のエラーは500として返す
+            raise HTTPException(status_code=500, detail=f"Internal server error: {error_message}")
+    
     logger.debug("Route response: %s", response)
     return response
 
@@ -75,8 +92,25 @@ async def normal_route(
         
     Returns:
         dict: 通常のルート情報を含む辞書
+        
+    Raises:
+        HTTPException: GraphHopperへのリクエストが失敗した場合
     """
     logger.info("/normal_route called with start=%s goal=%s", start, goal)
     response = get_route_from_graphhopper(start, goal)
+    
+    # GraphHopperからのエラーレスポンスをチェック
+    if "error" in response:
+        status_code = response.get("status_code", 500)
+        error_message = response["error"]
+        logger.error("GraphHopper error: %s", error_message)
+        
+        # GraphHopperのAPIエラーの場合は400番台エラーとして返す
+        if status_code in [400, 404, 422]:
+            raise HTTPException(status_code=status_code, detail=error_message)
+        else:
+            # その他のエラーは500として返す
+            raise HTTPException(status_code=500, detail=f"Internal server error: {error_message}")
+    
     logger.debug("Normal route response: %s", response)
     return response

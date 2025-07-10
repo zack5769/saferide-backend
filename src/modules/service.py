@@ -102,11 +102,27 @@ def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict 
             logger.info("Route calculation successful")
             return route_data
         else:
-            error_msg = f"GraphHopper API error: {response.status_code} - {response.text}"
+            # GraphHopperからのエラーレスポンスを詳細に処理
+            try:
+                error_json = response.json()
+                if "message" in error_json:
+                    error_detail = error_json["message"]
+                    # GraphHopperの具体的なエラーメッセージを含める
+                    if "hints" in error_json and error_json["hints"]:
+                        error_detail += " Details: " + "; ".join([
+                            hint.get("message", "") for hint in error_json["hints"]
+                        ])
+                else:
+                    error_detail = response.text
+            except (json.JSONDecodeError, ValueError):
+                error_detail = response.text
+            
+            error_msg = f"GraphHopper API error: {response.status_code} - {error_detail}"
             logger.error(error_msg)
             return {
                 "error": error_msg,
-                "status_code": response.status_code
+                "status_code": response.status_code,
+                "graphhopper_response": error_json if 'error_json' in locals() else response.text
             }
             
     except requests.exceptions.RequestException as e:
