@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime
 
-from .values import coordinate
+from .values import coordinate, _deg2num, tile
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -11,6 +11,7 @@ class RainData:
     def __init__(self, appid: str):
         self.appid = appid
         self.num_rain_tiles = 0
+        self.rain_tile_list = []
 
 
     def get(self, coordinate_list: list[coordinate], date: datetime):
@@ -60,77 +61,53 @@ class RainData:
         logger.debug("Rain data fetch completed. Total features: %d", total_features)
         
 
-
-    def to_geojson(self, grid_size: float = 0.04):
+    def to_tile_geojson(self, zoom_level: int = 13):
         """
-        雨が降っているグリッドのGeoJSON形式のFeatureCollectionを生成
-        10分ごとの降雨予報（01ビット配列）を追加←もしかしたら今後つかうかも
-
+        雨データをタイル座標に変換し、GeoJSON形式のFeatureCollectionを返す
         Args:
-            grid_size (float): グリッドのサイズ
+            zoom_level (int): タイルのズームレベル
         Returns:
             dict: GeoJSON形式のFeatureCollection
         """
-        logger.debug("Converting rain data to GeoJSON with grid_size: %f", grid_size)
+        logger.debug("Converting rain data to tile-based GeoJSON with zoom_level: %d", zoom_level)
         features = []
         processed_features = 0
         rain_features = 0
-        
+
         for feat in self.data.get("Feature", []):
             processed_features += 1
             try:
                 lon, lat = map(float, feat["Geometry"]["Coordinates"].split(","))
                 weather_list = feat["Property"]["WeatherList"]["Weather"]
-                logger.debug("Processing feature %d at coordinates (%f, %f)", processed_features, lon, lat)
 
-                # 予報情報のビット配列（0は晴れ, 1が雨）
-                rain_forecast_bits = [
-                    1 if (w.get("Type") == "forecast" and w.get("Rainfall", 0) > 0) else 0
-                    for w in weather_list if w.get("Type") == "forecast"
-                ]
-                
-                # 降雨量の詳細をログ出力
-                rainfall_values = [w.get("Rainfall", 0) for w in weather_list]
-                logger.debug("Rainfall values for feature %d: %s", processed_features, rainfall_values)
-                
-                # いずれかでrainfall>0ならポリゴン作成
+                # いずれかでrainfall>0ならタイルポリゴン作成
                 if any(w.get("Rainfall", 0) > 0 for w in weather_list):
                     rain_features += 1
                     self.num_rain_tiles += 1
-                    half = grid_size / 2
-                    poly = [
-                        [round(lon - half, 6), round(lat - half, 6)],
-                        [round(lon - half, 6), round(lat + half, 6)],
-                        [round(lon + half, 6), round(lat + half, 6)],
-                        [round(lon + half, 6), round(lat - half, 6)],
-                        [round(lon - half, 6), round(lat - half, 6)]
-                    ]
+                    tile_obj = _deg2num(coordinate(lat, lon), zoom_level)
+                    self.rain_tile_list.append(tile_obj)
+                    tile_geojson = tile_obj.to_geojson()
                     features.append({
                         "type": "Feature",
-                        "geometry": {
-                            "type": "Polygon",
-                            "coordinates": [poly]
-                        },
+                        "geometry": tile_geojson["features"][0]["geometry"],
                         "properties": {
                             "id": feat.get("Id"),
-                            "rain": True,
-                            "rain_forecast_bits": rain_forecast_bits
+                            "rain": True
                         }
                     })
-                    logger.debug("Created rain polygon for feature %d", processed_features)
+                    logger.debug("Created rain tile polygon for feature %d", processed_features)
                 else:
                     logger.debug("No rain detected for feature %d", processed_features)
-                    
             except Exception as e:
                 logger.warning("Skip feature %d due to error: %s", processed_features, e)
                 continue
-        
-        logger.debug("GeoJSON conversion completed. Processed: %d features, Rain features: %d", processed_features, rain_features)
+
+        logger.debug("Tile-based GeoJSON conversion completed. Processed: %d features, Rain features: %d", processed_features, rain_features)
         return {
             "type": "FeatureCollection",
             "features": features
         }
-    
+
 
     def to_request_json(self):
         """
@@ -139,9 +116,11 @@ class RainData:
         
         Returns:
             dict: GraphHopperリクエスト用のpriority・areas設定
+            list[tile]: タイルリスト
         """
         logger.debug("Converting rain data to GraphHopper request format")
-        geojson = self.to_geojson()
+        # geojson = self.to_geojson()
+        geojson = self.to_tile_geojson()
         # self.to_geojsonfile()  # Save GeoJSON to file for debugging
         features = geojson.get("features", [])
         logger.debug("Got %d features from GeoJSON conversion", len(features))
@@ -175,7 +154,7 @@ class RainData:
             }
         }
         logger.debug("GraphHopper request format conversion completed. Priority rules: %d, Areas: %d", len(priority), len(modified_features))
-        return result
+        return result, self.rain_tile_list
 
     def to_geojsonfile(self, filename: str = "rain_data.geojson"):
         """
@@ -184,7 +163,8 @@ class RainData:
         Args:
             filename (str): 保存するファイル名
         """
-        geojson = self.to_geojson()
+        # geojson = self.to_geojson()
+        geojson = self.to_tile_geojson()
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(geojson, f, ensure_ascii=False, indent=2)
         logger.info("GeoJSON data saved to %s", filename)

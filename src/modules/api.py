@@ -4,6 +4,7 @@ from typing import Dict, Any
 
 from .service import get_route_from_graphhopper, get_rain_info
 from src.core.logger import get_logger
+from .values import bounding_box, coordinate, tile
 
 logger = get_logger(__name__)
 
@@ -48,7 +49,7 @@ async def route(
         HTTPException: GraphHopperへのリクエストが失敗した場合
     """
     logger.info("/route called with start=%s goal=%s", start, goal)
-    rain_data = get_rain_info(start, goal)
+    rain_data, rain_tile_list = get_rain_info(start, goal)
     response = get_route_from_graphhopper(start, goal, rain_data)
     
     # GraphHopperからのエラーレスポンスをチェック
@@ -65,7 +66,7 @@ async def route(
             raise HTTPException(status_code=500, detail=f"Internal server error: {error_message}")
     
     logger.debug("Route response: %s", response)
-    return response
+    return {"response": response, "rain_tile_list": rain_tile_list}
 
 
 @app.get("/normal_route/{start}/{goal}",

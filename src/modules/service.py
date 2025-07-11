@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timezone, timedelta
 
 from .rain_data import RainData
-from .values import bounding_box, coordinate
+from .values import bounding_box, coordinate, tile
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -35,18 +35,20 @@ def get_rain_info(start: str, goal: str):
     goal_coord = coordinate(g_lat, glon)
     
     bbox = bounding_box(start_coord, goal_coord)
-    grid_coordinates = bbox.create_grid()
+    # grid_coordinates = bbox.create_grid()
+    tile_list = bbox.create_tiles(zoom_level=13)
+    tile_center_coord_list = bbox.get_tile_centers(tile_list)
     
     rain_data = RainData(YAHOO_API_KEY)
-    rain_data.get(coordinate_list=grid_coordinates, date=now)
+    rain_data.get(coordinate_list=tile_center_coord_list, date=now)
     
-    rain_request_data = rain_data.to_request_json()
+    rain_request_data, rain_tile_list = rain_data.to_request_json()
 
     logger.info("Rain tiles detected: %d", rain_data.num_rain_tiles)
     
     result = rain_request_data
     logger.debug("get_rain_info result: %s", json.dumps(result, ensure_ascii=False))
-    return result
+    return result, rain_tile_list
 
 
 def get_route_from_graphhopper(start: str, goal: str, rain_avoidance_data: dict = None):
