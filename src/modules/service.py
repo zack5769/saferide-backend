@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timezone, timedelta
 
 from .rain_data import RainData
-from .values import bounding_box, coordinate, tile
+from .values import bounding_box, coordinate
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)

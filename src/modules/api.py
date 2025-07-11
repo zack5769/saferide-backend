@@ -3,11 +3,10 @@ from starlette.middleware.cors import CORSMiddleware
 from typing import Dict, Any
 
 from .service import get_route_from_graphhopper, get_rain_info
+
 from src.core.logger import get_logger
-from .values import bounding_box, coordinate, tile
 
 logger = get_logger(__name__)
-
 
 app = FastAPI()
 
