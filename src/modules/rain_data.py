@@ -32,7 +32,6 @@ class RainData:
             coord_pairs = ' '.join([f'{coord.lon},{coord.lat}' for coord in chunk])
             url = f'https://map.yahooapis.jp/weather/V1/place?coordinates={coord_pairs}&appid={self.appid}&output=json&date={date_str}'
             logger.debug("Processing chunk %d/%d with %d coordinates", chunk_index + 1, len(chunks), len(chunk))
-            logger.debug("Request URL: %s", url)
                 
             try:
                 response = requests.get(url)
@@ -43,7 +42,6 @@ class RainData:
                     continue
                 
                 chunk_data = response.json()
-                logger.debug("Received JSON data for chunk %d, data keys: %s", chunk_index + 1, list(chunk_data.keys()))
                 
                 if "Feature" in chunk_data:
                     features_count = len(chunk_data["Feature"])
@@ -95,9 +93,8 @@ class RainData:
                             "rain": True
                         }
                     })
-                    logger.debug("Created rain tile polygon for feature %d", processed_features)
                 else:
-                    logger.debug("No rain detected for feature %d", processed_features)
+                    continue
             except Exception as e:
                 logger.warning("Skip feature %d due to error: %s", processed_features, e)
                 continue
@@ -119,9 +116,7 @@ class RainData:
             list[tile]: タイルリスト
         """
         logger.debug("Converting rain data to GraphHopper request format")
-        # geojson = self.to_geojson()
         geojson = self.to_tile_geojson()
-        # self.to_geojsonfile()  # Save GeoJSON to file for debugging
         features = geojson.get("features", [])
         logger.debug("Got %d features from GeoJSON conversion", len(features))
         
@@ -156,15 +151,3 @@ class RainData:
         logger.debug("GraphHopper request format conversion completed. Priority rules: %d, Areas: %d", len(priority), len(modified_features))
         return result, self.rain_tile_list
 
-    def to_geojsonfile(self, filename: str = "rain_data.geojson"):
-        """
-        GeoJSON形式でファイルに保存
-        
-        Args:
-            filename (str): 保存するファイル名
-        """
-        # geojson = self.to_geojson()
-        geojson = self.to_tile_geojson()
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(geojson, f, ensure_ascii=False, indent=2)
-        logger.info("GeoJSON data saved to %s", filename)

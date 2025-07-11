@@ -47,7 +47,7 @@ def main():
     except Exception as e:
         logger.error("Error fetching rain data: %s", e)
     try:
-        geojson = rain_data.to_geojson()
+        geojson = rain_data.to_tile_geojson()
         with open('rain_data.geojson', 'w', encoding='utf-8') as f:
             json.dump(geojson, f, ensure_ascii=False, indent=2)
         logger.info("GeoJSON data successfully written to rain_data.json")
