@@ -85,27 +85,6 @@ class bounding_box:
     def __str__(self):
         return f"BoundingBox(min_lat={self.min_lat}, max_lat={self.max_lat}, min_lon={self.min_lon}, max_lon={self.max_lon})"
 
-    def create_grid(self, grid_deg: float = 0.04) -> List[coordinate]:
-        """
-        0.04度四方の固定タイルでグリッド分割を行う。
-        Args:
-            grid_deg: グリッドサイズ（度数）デフォルト0.04度
-        Returns:
-            List[coordinate]: グリッド中心座標リスト
-        """
-        lat_range = self.max_lat - self.min_lat
-        lon_range = self.max_lon - self.min_lon
-        n_lat = max(1, int(np.ceil(lat_range / grid_deg)))
-        n_lon = max(1, int(np.ceil(lon_range / grid_deg)))
-        lat_edges = np.linspace(self.min_lat, self.max_lat, n_lat + 1)
-        lon_edges = np.linspace(self.min_lon, self.max_lon, n_lon + 1)
-        grid_coordinates = []
-        for i in range(n_lat):
-            for j in range(n_lon):
-                center_lat = (lat_edges[i] + lat_edges[i+1]) / 2
-                center_lon = (lon_edges[j] + lon_edges[j+1]) / 2
-                grid_coordinates.append(coordinate(center_lat, center_lon))
-        return grid_coordinates
 
     def create_tiles(self, zoom_level: int = 13) -> List[tile]:
         """
@@ -141,15 +120,16 @@ class bounding_box:
 
 def _num2deg(tile_obj: tile) -> coordinate:
     """
-    タイル座標を緯度経度に変換する。
+    タイル座標をタイルの中心の緯度経度に変換する。
     Args:
         tile_obj (tile): タイル座標（x, y, zoom）
     Returns:
-        coordinate: 緯度経度の座標
+        coordinate: タイルの中心の緯度経度座標
     """
     n = 1 << tile_obj.zoom
-    lon_deg = tile_obj.x / n * 360.0 - 180.0
-    lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * tile_obj.y / n)))
+    # タイルの中心座標を計算するため、0.5を加算
+    lon_deg = (tile_obj.x + 0.5) / n * 360.0 - 180.0
+    lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * (tile_obj.y + 0.5) / n)))
     lat_deg = math.degrees(lat_rad)
     return coordinate(lat_deg, lon_deg)
 

@@ -71,6 +71,11 @@ class RainData:
         features = []
         processed_features = 0
         rain_features = 0
+        unique_tiles = set()  # 重複タイルを防ぐためのセット
+        
+        # タイルリストをクリア
+        self.num_rain_tiles = 0
+        self.rain_tile_list = []
 
         for feat in self.data.get("Feature", []):
             processed_features += 1
@@ -80,25 +85,36 @@ class RainData:
 
                 # いずれかでrainfall>0ならタイルポリゴン作成
                 if any(w.get("Rainfall", 0) > 0 for w in weather_list):
-                    rain_features += 1
-                    self.num_rain_tiles += 1
                     tile_obj = _deg2num(coordinate(lat, lon), zoom_level)
-                    self.rain_tile_list.append(tile_obj)
-                    tile_geojson = tile_obj.to_geojson()
-                    features.append({
-                        "type": "Feature",
-                        "geometry": tile_geojson["features"][0]["geometry"],
-                        "properties": {
-                            "id": feat.get("Id"),
-                            "rain": True
-                        }
-                    })
+                    tile_key = (tile_obj.x, tile_obj.y, tile_obj.zoom)
+                    
+                    # 既に処理済みのタイルかチェック
+                    if tile_key not in unique_tiles:
+                        unique_tiles.add(tile_key)
+                        rain_features += 1
+                        self.num_rain_tiles += 1
+                        self.rain_tile_list.append(tile_obj)
+                        tile_geojson = tile_obj.to_geojson()
+                        features.append({
+                            "type": "Feature",
+                            "geometry": tile_geojson["features"][0]["geometry"],
+                            "properties": {
+                                "id": feat.get("Id"),
+                                "rain": True,
+                                "tile_x": tile_obj.x,
+                                "tile_y": tile_obj.y,
+                                "tile_z": tile_obj.zoom
+                            }
+                        })
                 else:
                     continue
             except Exception as e:
                 logger.warning("Skip feature %d due to error: %s", processed_features, e)
                 continue
-
+        
+        # with open('rain_data.geojson', 'w', encoding='utf-8') as f:
+        #     json.dump({"type": "FeatureCollection", "features": features}, f, ensure_ascii=False, indent=2)
+        #     logger.debug("Rain data written to rain_data.geojson with %d features", len(features))
         logger.debug("Tile-based GeoJSON conversion completed. Processed: %d features, Rain features: %d", processed_features, rain_features)
         return {
             "type": "FeatureCollection",
